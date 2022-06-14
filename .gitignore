@@ -14,5 +14,14 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
+# OSX leaves these everywhere on SMB shares
+._*
+
+# OSX trash
+.DS_Store
+
+# IntelliJ’s project specific settings files
+.idea/
+
 # Product
 bin/

@@ -20,12 +20,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package crypto
 
 import (
-	"github.com/KofClubs/siwa/cmd"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.dedis.ch/kyber/v3/util/key"
 )
 
-func main() {
-	cmd.Execute()
+func TestBls(t *testing.T) {
+	blsSuite := GetBlsSuite()
+	require.NotNil(t, blsSuite)
+
+	pair := key.NewKeyPair(blsSuite)
+	privateKey, publicKey := pair.Private, pair.Public
+	privateKeyString := privateKey.String()
+
+	blsPrivateKey, err := GetBlsPrivateKey(blsSuite, privateKeyString)
+	require.Nil(t, err)
+	assert.Equal(t, privateKeyString, blsPrivateKey.String())
+
+	blsPublicKey, err := GetBlsPublicKey(blsSuite, blsPrivateKey)
+	require.Nil(t, err)
+	assert.Equal(t, publicKey, blsPublicKey)
 }
