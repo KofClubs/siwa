@@ -20,12 +20,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package crypto
 
 import (
-	"github.com/KofClubs/siwa/cmd"
+	"sync"
+
+	"github.com/KofClubs/log"
+	"github.com/KofClubs/siwa/utils"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
+	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 )
 
-func main() {
-	cmd.Execute()
+type DistributedKeyGenerator struct {
+	Mutex sync.Mutex
+
+	PedersenDkg      *pedersendkg.DistKeyGenerator
+	pedersendkgDeals map[int]*pedersendkg.Deal
+}
+
+func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, publicKeys []kyber.Point, threshold int) (*DistributedKeyGenerator, error) {
+	if suite == nil {
+		log.Error("nil pointer dereference", "suite", suite, "err", utils.NilPtrDerefErr)
+		return nil, utils.NilPtrDerefErr
+	}
+
+	pedersenDkg, err := pedersendkg.NewDistKeyGenerator(suite, privateKey, publicKeys, threshold)
+	if err != nil {
+		log.Error("fail to create pedersen distributed key generator", "err", err)
+		return nil, err
+	}
+
+	return &DistributedKeyGenerator{
+		PedersenDkg: pedersenDkg,
+	}, nil
 }

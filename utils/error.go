@@ -20,12 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package main
+package utils
 
 import (
-	"github.com/KofClubs/siwa/cmd"
+	"fmt"
 )
 
-func main() {
-	cmd.Execute()
-}
+var (
+	InvMemAddrErr  = fmt.Errorf("invalid memory address")
+	NilPtrDerefErr = fmt.Errorf("nil pointer dereference")
+)
