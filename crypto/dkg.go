@@ -25,8 +25,8 @@ package crypto
 import (
 	"sync"
 
-	"github.com/KofClubs/log"
-	"github.com/KofClubs/siwa/utils"
+	"github.com/MonteCarloClub/log"
+	"github.com/MonteCarloClub/utils"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"

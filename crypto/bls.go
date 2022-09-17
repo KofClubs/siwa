@@ -25,8 +25,8 @@ package crypto
 import (
 	"encoding/hex"
 
-	"github.com/KofClubs/log"
-	"github.com/KofClubs/siwa/utils"
+	"github.com/MonteCarloClub/log"
+	"github.com/MonteCarloClub/utils"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 )

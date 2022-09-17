@@ -23,8 +23,8 @@ THE SOFTWARE.
 package crypto
 
 import (
-	"github.com/KofClubs/log"
-	"github.com/KofClubs/siwa/utils"
+	"github.com/MonteCarloClub/log"
+	"github.com/MonteCarloClub/utils"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 )
 
