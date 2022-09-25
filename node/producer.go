@@ -2,7 +2,6 @@ package node
 
 import (
 	"fmt"
-
 	"github.com/KofClubs/siwa/crypto"
 	"github.com/KofClubs/siwa/network"
 	"github.com/KofClubs/siwa/node/querier"
@@ -10,6 +9,7 @@ import (
 	"github.com/MonteCarloClub/utils"
 	"github.com/MonteCarloClub/zmq"
 	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
 )
 
 type ProducerEntity struct {
@@ -20,13 +20,14 @@ type ProducerEntity struct {
 }
 
 type Producer struct {
-	Id           string
-	Aggregator   *Aggregator
-	Rank         uint64
-	PublicKey    kyber.Point
-	Dkg          *crypto.DistributedKeyGenerator
-	ZmqSocketSet *zmq.SocketSet
-	Querier      *querier.Querier
+	Id, AggregatorId string
+	Rank             uint64
+	Suite            *bn256.Suite
+	privateKey       kyber.Scalar
+	PublicKey        kyber.Point
+	Dkg              *crypto.DistributedKeyGenerator
+	ZmqSocketSet     *zmq.SocketSet
+	Querier          *querier.Querier
 }
 
 func (producerEntity *ProducerEntity) CreateProducer() *Producer {
@@ -63,19 +64,14 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 			"err", err)
 		return nil
 	}
-	// todo: enhanced consistency when appending this public key
-	publicKeys := []kyber.Point{aggregator.PublicKey, publicKey}
-	for _, peerProducer := range aggregator.Producers {
-		publicKeys = append(publicKeys, peerProducer.PublicKey)
-	}
-	threshold := aggregator.Threshold
-	// todo: update dkg threshold
-	if aggregator.Threshold < len(aggregator.Producers)/2+1 {
-		threshold = len(aggregator.Producers)/2 + 1
+	publicKeys, threshold, err := aggregator.AddProducer(id, publicKey)
+	if err != nil {
+		log.Error("fail to add producer", "private key", producerEntity.PrivateKey, "err", err)
+		return nil
 	}
 	dkg, err := crypto.CreateDistributedKeyGenerator(suite, privateKey, publicKeys, threshold)
 	if err != nil {
-		log.Error("fail to create distributed key generator of producer",
+		log.Error("fail to update distributed key generator of producer when creating producer",
 			"private key", producerEntity.PrivateKey, "err", err)
 		return nil
 	}
@@ -87,8 +83,7 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 			"err", err)
 		return nil
 	}
-	err = zmqSocketSet.SetSubSocket(network.GetAggregatorSubEndpoint(aggregator.BroadcastPort),
-		network.GetProducerFilter(rank))
+	err = zmqSocketSet.SetSubSocket(network.GetSubEndpoint(aggregator.BroadcastPort, rank), network.GetFilter(rank))
 	if err != nil {
 		log.Error("fail to set sub socket of producer", "broadcast port", aggregator.BroadcastPort,
 			"err", err)
@@ -106,14 +101,17 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		return nil
 	}
 
-	// todo: defer: init a new dkg generation
-	return &Producer{
+	producer := &Producer{
 		Id:           id,
-		Aggregator:   aggregator,
+		AggregatorId: aggregatorId,
 		Rank:         rank,
+		Suite:        suite,
+		privateKey:   privateKey,
 		PublicKey:    publicKey,
 		Dkg:          dkg,
 		ZmqSocketSet: zmqSocketSet,
 		Querier:      &querierOfProducer,
 	}
+	setProducer(producer)
+	return producer
 }

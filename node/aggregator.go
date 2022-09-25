@@ -17,8 +17,9 @@ type AggregatorEntity struct {
 
 type Aggregator struct {
 	Id            string
-	Producers     []*Producer
+	ProducerIds   map[string]struct{}
 	Suite         *bn256.Suite
+	privateKey    kyber.Scalar
 	PublicKey     kyber.Point
 	Threshold     int
 	Dkg           *crypto.DistributedKeyGenerator
@@ -59,8 +60,8 @@ func (aggregatorEntity *AggregatorEntity) CreateAggregator() *Aggregator {
 			"broadcast port", aggregatorEntity.BroadcastPort, "err", err)
 		return nil
 	}
-	err = zmqSocketSet.SetSubSocket(network.GetAggregatorSubEndpoint(aggregatorEntity.BroadcastPort),
-		network.AggregatorFilter)
+	err = zmqSocketSet.SetSubSocket(network.GetSubEndpoint(aggregatorEntity.BroadcastPort, 0),
+		network.GetFilter(0))
 	if err != nil {
 		log.Error("fail to set sub socket of aggregator",
 			"broadcast port", aggregatorEntity.BroadcastPort, "err", err)
@@ -69,8 +70,9 @@ func (aggregatorEntity *AggregatorEntity) CreateAggregator() *Aggregator {
 
 	aggregator := &Aggregator{
 		Id:            getAggregatorId(),
-		Producers:     make([]*Producer, 0),
+		ProducerIds:   make(map[string]struct{}),
 		Suite:         suite,
+		privateKey:    privateKey,
 		PublicKey:     publicKey,
 		Threshold:     1,
 		Dkg:           dkg,
@@ -79,4 +81,76 @@ func (aggregatorEntity *AggregatorEntity) CreateAggregator() *Aggregator {
 	}
 	setAggregator(aggregator)
 	return aggregator
+}
+
+func (aggregator *Aggregator) AddProducer(producerId string, producerPublicKey kyber.Point) ([]kyber.Point, int, error) {
+	if aggregator == nil || aggregator.ProducerIds == nil {
+		log.Error("nil aggregator or producer ids", "err", utils.NilPtrDeref)
+	}
+
+	updatedThreshold := aggregator.Threshold
+	updatedProducerCount := len(aggregator.ProducerIds)
+	if _, ok := aggregator.ProducerIds[producerId]; !ok {
+		updatedProducerCount++
+	}
+	if aggregator.Threshold < updatedProducerCount/2+1 {
+		updatedThreshold = updatedProducerCount/2 + 1
+	}
+
+	publicKeys := []kyber.Point{aggregator.PublicKey, producerPublicKey}
+	for originProducerId := range aggregator.ProducerIds {
+		if originProducerId == producerId {
+			continue
+		}
+		publicKeys = append(publicKeys, getProducer(originProducerId).PublicKey)
+	}
+	dkg, err := crypto.CreateDistributedKeyGenerator(aggregator.Suite, aggregator.privateKey, publicKeys,
+		updatedThreshold)
+	if err != nil {
+		log.Error("fail to update distributed key generator of aggregator when adding producer",
+			"producer id", producerId, "err", err)
+		return nil, 0, err
+	}
+
+	aggregator.ProducerIds[producerId] = struct{}{}
+	aggregator.Threshold = updatedThreshold
+	aggregator.Dkg = dkg
+	return publicKeys, aggregator.Threshold, nil
+}
+
+func (aggregator *Aggregator) DeleteProducer(producerId string) error {
+	if aggregator == nil || aggregator.ProducerIds == nil {
+		log.Error("nil aggregator or producer ids", "err", utils.NilPtrDeref)
+	}
+
+	if _, ok := aggregator.ProducerIds[producerId]; !ok {
+		log.Warn("producer not existed", "producer id", producerId)
+		return nil
+	}
+
+	updatedThreshold := aggregator.Threshold
+	updatedProducerCount := len(aggregator.ProducerIds) - 1
+	if aggregator.Threshold > updatedProducerCount/2+1 {
+		updatedThreshold = updatedProducerCount/2 + 1
+	}
+
+	publicKeys := []kyber.Point{aggregator.PublicKey}
+	for originProducerId := range aggregator.ProducerIds {
+		if originProducerId == producerId {
+			continue
+		}
+		publicKeys = append(publicKeys, getProducer(originProducerId).PublicKey)
+	}
+	dkg, err := crypto.CreateDistributedKeyGenerator(aggregator.Suite, aggregator.privateKey, publicKeys,
+		updatedThreshold)
+	if err != nil {
+		log.Error("fail to update distributed key generator of aggregator when deleting producer",
+			"producer id", producerId, "err", err)
+		return err
+	}
+
+	delete(aggregator.ProducerIds, producerId)
+	aggregator.Threshold = updatedThreshold
+	aggregator.Dkg = dkg
+	return nil
 }

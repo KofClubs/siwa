@@ -5,31 +5,25 @@ import (
 )
 
 const (
-	AggregatorFilter     = "to_aggregator: "
-	ProducerFilterFormat = "to_producer_%v: "
+	FilterFormat = "to_node_%v: "
 )
 
 func GetPubEndpoint(broadcastPort string) string {
 	return fmt.Sprintf("tcp://*:%v", broadcastPort)
 }
 
-func GetAggregatorSubEndpoint(broadcastPort string) string {
-	// ip of aggregator: 127.0.0.0
-	return fmt.Sprintf("tcp://127.0.0.0:%v", broadcastPort)
-}
-
-func GetProducerSubEndpoint(broadcastPort string, rankOfProducer uint64) string {
-	// ip of producer: [127.0.0.1, 127.255.255.255]
-	index := rankOfProducer + 1
-	b := index >> 16
+func GetSubEndpoint(broadcastPort string, rank uint64) string {
+	// aggregator rank == 0, producer rank > 0
+	// sub endpoint: tcp://127.#{b}.#{c}.#{d}:#{broadcastPort}
+	b := rank >> 16
 	if b > 255 {
 		return ""
 	}
-	c := (index - (b << 16)) >> 8
-	d := index - (b << 16) - (c << 8)
+	c := (rank - (b << 16)) >> 8
+	d := rank - (b << 16) - (c << 8)
 	return fmt.Sprintf("tcp://127.%v.%v.%v:%v", b, c, d, broadcastPort)
 }
 
-func GetProducerFilter(rankOfProducer uint64) string {
-	return fmt.Sprintf(ProducerFilterFormat, rankOfProducer)
+func GetFilter(rank uint64) string {
+	return fmt.Sprintf(FilterFormat, rank)
 }
