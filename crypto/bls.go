@@ -37,7 +37,7 @@ func GetBlsSuite() *bn256.Suite {
 
 func GetBlsPrivateKey(suite *bn256.Suite, privateKeyString string) (kyber.Scalar, error) {
 	if suite == nil {
-		log.Error("nil pointer dereference", "suite", suite, "err", utils.NilPtrDerefErr)
+		log.Error("nil suite", "err", utils.NilPtrDerefErr)
 		return nil, utils.NilPtrDerefErr
 	}
 
@@ -50,16 +50,15 @@ func GetBlsPrivateKey(suite *bn256.Suite, privateKeyString string) (kyber.Scalar
 	scalar := suite.Scalar()
 	err = scalar.UnmarshalBinary(privateKeyBytes)
 	if err != nil {
-		log.Error("fail to unmarshal bls private key", "privateKeyBytes", privateKeyBytes, "err", err)
+		log.Error("fail to unmarshal bls private key", "privateKeyString", privateKeyString, "err", err)
 		return nil, err
 	}
-
 	return scalar, nil
 }
 
 func GetBlsPublicKey(suite *bn256.Suite, blsPrivateKey kyber.Scalar) (kyber.Point, error) {
 	if suite == nil {
-		log.Error("nil pointer dereference", "suite", suite, "err", utils.NilPtrDerefErr)
+		log.Error("nil suite", "err", utils.NilPtrDerefErr)
 		return nil, utils.NilPtrDerefErr
 	}
 

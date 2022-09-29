@@ -1,7 +1,30 @@
+/*
+Copyright (c) 2022 Zhang Zhanpeng <zhangregister@outlook.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package node
 
 import (
 	"fmt"
+
 	"github.com/KofClubs/siwa/crypto"
 	"github.com/KofClubs/siwa/network"
 	"github.com/KofClubs/siwa/node/querier"
@@ -64,17 +87,6 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 			"err", err)
 		return nil
 	}
-	publicKeys, threshold, err := aggregator.AddProducer(id, publicKey)
-	if err != nil {
-		log.Error("fail to add producer", "private key", producerEntity.PrivateKey, "err", err)
-		return nil
-	}
-	dkg, err := crypto.CreateDistributedKeyGenerator(suite, privateKey, publicKeys, threshold)
-	if err != nil {
-		log.Error("fail to update distributed key generator of producer when creating producer",
-			"private key", producerEntity.PrivateKey, "err", err)
-		return nil
-	}
 
 	zmqSocketSet := zmq.CreateSocketSet()
 	err = zmqSocketSet.SetPubSocket(network.GetPubEndpoint(aggregator.BroadcastPort))
@@ -98,6 +110,26 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		querierOfProducer = querier.Querier(redisQuerier)
 	default:
 		log.Error("fail to init querier of producer", "err", fmt.Errorf("illegal querier_source"))
+		return nil
+	}
+
+	// Finally add the producer, which needs to be rolled back if its subsequent operations fail.
+	publicKeys, threshold, err := aggregator.addProducer(id, publicKey)
+	if err != nil {
+		log.Error("fail to add producer", "private key", producerEntity.PrivateKey, "err", err)
+		return nil
+	}
+	dkg, err := crypto.CreateDistributedKeyGenerator(suite, privateKey, publicKeys, threshold)
+	if err != nil {
+		log.Error("fail to update distributed key generator of producer when creating producer",
+			"private key", producerEntity.PrivateKey, "err", err)
+		err = aggregator.deleteProducer(id)
+		if err == nil {
+			log.Info("adding a producer rolled back", "private key", producerEntity.PrivateKey)
+		} else {
+			log.Warn("fail to roll back adding a producer", "private key", producerEntity.PrivateKey,
+				"err", err)
+		}
 		return nil
 	}
 

@@ -20,34 +20,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package crypto
+package querier
 
 import (
-	"github.com/MonteCarloClub/log"
-	"github.com/MonteCarloClub/utils"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/pairing/bn256"
-	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type DistributedKeyGenerator struct {
-	PedersenDkg      *pedersendkg.DistKeyGenerator
-	pedersendkgDeals map[int]*pedersendkg.Deal
-}
+func TestRedisQuerier(t *testing.T) {
+	// todos before testing:
+	// $ docker pull redis:latest
+	// $ docker run -d -p 6379:6379 redis:latest
+	redisQuerier := &RedisQuerier{}
+	redisQuerier.Init("localhost:6379")
+	ctx := context.Background()
+	err := redisQuerier.RedisClient.Set(ctx, "k1", "v1", 0).Err()
+	require.Nil(t, err)
 
-func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, publicKeys []kyber.Point, threshold int) (*DistributedKeyGenerator, error) {
-	if suite == nil {
-		log.Error("nil suite", "err", utils.NilPtrDerefErr)
-		return nil, utils.NilPtrDerefErr
-	}
+	value := redisQuerier.Do("k1")
+	assert.Equal(t, "v1", value)
+	value = redisQuerier.Do("k2")
+	assert.Equal(t, "", value)
 
-	pedersenDkg, err := pedersendkg.NewDistKeyGenerator(suite, privateKey, publicKeys, threshold)
-	if err != nil {
-		log.Error("fail to create pedersen distributed key generator", "err", err)
-		return nil, err
-	}
-
-	return &DistributedKeyGenerator{
-		PedersenDkg: pedersenDkg,
-	}, nil
+	err = redisQuerier.RedisClient.Del(ctx, "k1").Err()
+	require.Nil(t, err)
+	redisQuerier.Close()
 }

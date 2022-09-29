@@ -32,7 +32,7 @@ import (
 	"go.dedis.ch/kyber/v3/util/key"
 )
 
-func TestDkg(t *testing.T) {
+func TestPedersenDkg(t *testing.T) {
 	numberOfDkgs, threshold := 3, 2
 
 	blsSuite := GetBlsSuite()
@@ -53,7 +53,7 @@ func TestDkg(t *testing.T) {
 	}
 
 	for i := 0; i < numberOfDkgs; i++ {
-		err := dkgs[i].GetPedersenDkgDeals()
+		err := dkgs[i].CreatePedersenDkgDeals()
 		require.Nil(t, err)
 		assert.Equal(t, numberOfDkgs-1, len(dkgs[i].pedersendkgDeals))
 	}
