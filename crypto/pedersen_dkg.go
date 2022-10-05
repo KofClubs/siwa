@@ -23,23 +23,20 @@ THE SOFTWARE.
 package crypto
 
 import (
-	"github.com/KofClubs/log"
-	"github.com/KofClubs/siwa/utils"
+	"github.com/MonteCarloClub/log"
+	"github.com/MonteCarloClub/utils"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 )
 
-func (dkg *DistributedKeyGenerator) GetPedersenDkgDeals() error {
-	dkg.Mutex.Lock()
-	defer dkg.Mutex.Unlock()
-
+func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
 	if dkg.PedersenDkg == nil {
-		log.Error("nil pointer dereference", "dkg.PedersenDkg", dkg.PedersenDkg, "err", utils.NilPtrDerefErr)
+		log.Error("nil pedersen dkg", "err", utils.NilPtrDerefErr)
 		return utils.NilPtrDerefErr
 	}
 
 	pedersenDkgDeals, err := dkg.PedersenDkg.Deals()
 	if err != nil {
-		log.Error("fail to create ped-dkg deals", "err", err)
+		log.Error("fail to create pedersen dkg deals", "err", err)
 		return err
 	}
 
@@ -48,11 +45,8 @@ func (dkg *DistributedKeyGenerator) GetPedersenDkgDeals() error {
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *pedersendkg.Deal) (*pedersendkg.Response, bool) {
-	dkg.Mutex.Lock()
-	defer dkg.Mutex.Unlock()
-
 	if dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
-		log.Error("nil pointer dereference", "dkg.PedersenDkg", dkg.PedersenDkg, "pedersenDkgDeal", pedersenDkgDeal)
+		log.Error("nil pedersen dkg or deal")
 		return nil, false
 	}
 
@@ -60,20 +54,16 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *peder
 	if response == nil || err != nil {
 		return nil, false
 	}
-
 	return response, true
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgResponse *pedersendkg.Response) bool {
-	dkg.Mutex.Lock()
-	defer dkg.Mutex.Unlock()
-
 	if dkg.PedersenDkg == nil || pedersenDkgResponse == nil {
-		log.Error("nil pointer dereference", "dkg.PedersenDkg", dkg.PedersenDkg, "pedersenDkgResponse", pedersenDkgResponse)
+		log.Error("nil pedersen dkg or response")
 		return false
 	}
 
 	_, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
-	// TODO 是否处理 justification？
+	// todo: handle justification?
 	return err == nil
 }

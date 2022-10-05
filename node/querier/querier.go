@@ -20,13 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package utils
+package querier
 
-import (
-	"fmt"
-)
-
-var (
-	InvMemAddrErr  = fmt.Errorf("invalid memory address")
-	NilPtrDerefErr = fmt.Errorf("nil pointer dereference")
-)
+type Querier interface {
+	Init(args ...interface{})
+	Do(expression string) string
+	Close()
+}

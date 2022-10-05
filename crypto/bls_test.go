@@ -46,3 +46,19 @@ func TestBls(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, publicKey, blsPublicKey)
 }
+
+func TestCodec(t *testing.T) {
+	blsSuite := GetBlsSuite()
+	require.NotNil(t, blsSuite)
+
+	pair := key.NewKeyPair(blsSuite)
+	publicKey := pair.Public
+
+	publicKeyBytes := EncodeBlsPublicKey(publicKey)
+	assert.NotNil(t, publicKeyBytes)
+	assert.Greater(t, len(publicKeyBytes), 0)
+
+	actualPublicKey, err := DecodeBlsPublicKey(blsSuite, publicKeyBytes)
+	assert.Nil(t, err)
+	assert.True(t, actualPublicKey.Equal(publicKey))
+}

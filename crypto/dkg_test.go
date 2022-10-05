@@ -32,19 +32,19 @@ import (
 	"go.dedis.ch/kyber/v3/util/key"
 )
 
-func TestDkg(t *testing.T) {
-	numberOfDkgs, threshold := 3, 2
+func TestPedersenDkg(t *testing.T) {
+	dkgCount, threshold := 3, 2
 
 	blsSuite := GetBlsSuite()
 
-	privateKeys, publicKeys := make([]kyber.Scalar, numberOfDkgs), make([]kyber.Point, numberOfDkgs)
-	for i := 0; i < numberOfDkgs; i++ {
+	privateKeys, publicKeys := make([]kyber.Scalar, dkgCount), make([]kyber.Point, dkgCount)
+	for i := 0; i < dkgCount; i++ {
 		pair := key.NewKeyPair(blsSuite)
 		privateKeys[i], publicKeys[i] = pair.Private, pair.Public
 	}
 
-	dkgs := make([]*DistributedKeyGenerator, numberOfDkgs)
-	for i := 0; i < numberOfDkgs; i++ {
+	dkgs := make([]*DistributedKeyGenerator, dkgCount)
+	for i := 0; i < dkgCount; i++ {
 		dkg, err := CreateDistributedKeyGenerator(blsSuite, privateKeys[i], publicKeys, threshold)
 		require.NotNil(t, dkg)
 		require.NotNil(t, dkg.PedersenDkg)
@@ -52,14 +52,14 @@ func TestDkg(t *testing.T) {
 		dkgs[i] = dkg
 	}
 
-	for i := 0; i < numberOfDkgs; i++ {
-		err := dkgs[i].GetPedersenDkgDeals()
+	for i := 0; i < dkgCount; i++ {
+		err := dkgs[i].CreatePedersenDkgDeals()
 		require.Nil(t, err)
-		assert.Equal(t, numberOfDkgs-1, len(dkgs[i].pedersendkgDeals))
+		assert.Equal(t, dkgCount-1, len(dkgs[i].pedersendkgDeals))
 	}
 
-	pedersenDkgResponsesSlice := make([]map[int]*pedersendkg.Response, numberOfDkgs)
-	for i := 0; i < numberOfDkgs; i++ {
+	pedersenDkgResponsesSlice := make([]map[int]*pedersendkg.Response, dkgCount)
+	for i := 0; i < dkgCount; i++ {
 		pedersenDkgResponsesSlice[i] = make(map[int]*pedersendkg.Response)
 		for j, pedersenDkgDeal := range dkgs[i].pedersendkgDeals {
 			pedersenDkgResponse, ok := dkgs[j].VerifyPedersenDkgDeal(pedersenDkgDeal)
@@ -69,7 +69,7 @@ func TestDkg(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < numberOfDkgs; i++ {
+	for i := 0; i < dkgCount; i++ {
 		for _, pedersenDkgResponse := range pedersenDkgResponsesSlice[i] {
 			ok := dkgs[i].VerifyPedersenDkgResponse(pedersenDkgResponse)
 			assert.True(t, ok)

@@ -27,27 +27,28 @@ import (
 	"github.com/MonteCarloClub/utils"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
-	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 )
 
-type DistributedKeyGenerator struct {
-	PedersenDkg      *pedersendkg.DistKeyGenerator
-	pedersendkgDeals map[int]*pedersendkg.Deal
-}
-
-func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, publicKeys []kyber.Point, threshold int) (*DistributedKeyGenerator, error) {
+func DecodeBlsPublicKey(suite *bn256.Suite, data []byte) (kyber.Point, error) {
 	if suite == nil {
 		log.Error("nil suite", "err", utils.NilPtrDerefErr)
 		return nil, utils.NilPtrDerefErr
 	}
 
-	pedersenDkg, err := pedersendkg.NewDistKeyGenerator(suite, privateKey, publicKeys, threshold)
+	point := suite.Point()
+	err := point.UnmarshalBinary(data)
 	if err != nil {
-		log.Error("fail to create pedersen distributed key generator", "err", err)
+		log.Error("fail to unmarshal bls public key", "data", data, "err", err)
 		return nil, err
 	}
+	return point, nil
+}
 
-	return &DistributedKeyGenerator{
-		PedersenDkg: pedersenDkg,
-	}, nil
+func EncodeBlsPublicKey(blsPublicKey kyber.Point) []byte {
+	data, err := blsPublicKey.MarshalBinary()
+	if err != nil {
+		log.Error("fail to marshal bls public key", "err", err)
+		return nil
+	}
+	return data
 }
