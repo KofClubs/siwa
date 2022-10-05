@@ -26,7 +26,6 @@ import (
 	"fmt"
 
 	"github.com/KofClubs/siwa/crypto"
-	"github.com/KofClubs/siwa/network"
 	"github.com/KofClubs/siwa/node/querier"
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
@@ -89,18 +88,7 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 	}
 
 	zmqSocketSet := zmq.CreateSocketSet()
-	err = zmqSocketSet.SetPubSocket(network.GetPubEndpoint(aggregator.BroadcastPort))
-	if err != nil {
-		log.Error("fail to set pub socket of producer", "broadcast port", aggregator.BroadcastPort,
-			"err", err)
-		return nil
-	}
-	err = zmqSocketSet.SetSubSocket(network.GetSubEndpoint(aggregator.BroadcastPort, rank), network.GetFilter(rank))
-	if err != nil {
-		log.Error("fail to set sub socket of producer", "broadcast port", aggregator.BroadcastPort,
-			"err", err)
-		return nil
-	}
+	// todo: set this zmq socket set
 
 	var querierOfProducer querier.Querier
 	switch producerEntity.QuerierSource {
@@ -119,18 +107,24 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		log.Error("fail to add producer", "private key", producerEntity.PrivateKey, "err", err)
 		return nil
 	}
-	dkg, err := crypto.CreateDistributedKeyGenerator(suite, privateKey, publicKeys, threshold)
-	if err != nil {
-		log.Error("fail to update distributed key generator of producer when creating producer",
-			"private key", producerEntity.PrivateKey, "err", err)
-		err = aggregator.deleteProducer(id)
-		if err == nil {
-			log.Info("adding a producer rolled back", "private key", producerEntity.PrivateKey)
-		} else {
-			log.Warn("fail to roll back adding a producer", "private key", producerEntity.PrivateKey,
-				"err", err)
+	var dkg *crypto.DistributedKeyGenerator
+	if threshold < 2 {
+		log.Warn("distributed key generators not updated, threshold should not be less than 2",
+			"private key", producerEntity.PrivateKey)
+	} else {
+		dkg, err = crypto.CreateDistributedKeyGenerator(suite, privateKey, publicKeys, threshold)
+		if err != nil {
+			log.Error("fail to update distributed key generator of producer when creating producer",
+				"private key", producerEntity.PrivateKey, "err", err)
+			err = aggregator.deleteProducer(id)
+			if err == nil {
+				log.Info("adding a producer rolled back", "private key", producerEntity.PrivateKey)
+			} else {
+				log.Warn("fail to roll back adding a producer", "private key", producerEntity.PrivateKey,
+					"err", err)
+			}
+			return nil
 		}
-		return nil
 	}
 
 	producer := &Producer{

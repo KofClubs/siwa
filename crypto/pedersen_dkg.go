@@ -54,7 +54,6 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *peder
 	if response == nil || err != nil {
 		return nil, false
 	}
-
 	return response, true
 }
 
