@@ -23,6 +23,8 @@ THE SOFTWARE.
 package node
 
 import (
+	"time"
+
 	"github.com/KofClubs/siwa/crypto"
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
@@ -112,4 +114,22 @@ func (aggregator *Aggregator) deleteProducer(producerId string) error {
 	delete(aggregator.ProducerIds, producerId)
 	aggregator.Threshold = updatedThreshold
 	return nil
+}
+
+func (aggregator *Aggregator) SelectVerifierId() string {
+	if aggregator == nil || aggregator.ProducerIds == nil {
+		log.Error("nil aggregator or producer ids", "err", utils.NilPtrDeref)
+	}
+
+	timestamp := time.Now().UnixNano()
+	rank := int(timestamp) % len(aggregator.ProducerIds)
+	var producerId string
+	var index int
+	for producerId = range aggregator.ProducerIds {
+		if index == rank {
+			break
+		}
+		index++
+	}
+	return producerId
 }

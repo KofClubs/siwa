@@ -25,22 +25,26 @@ package node
 import (
 	"fmt"
 	"strconv"
+
+	"go.dedis.ch/kyber/v3"
 )
 
 var (
-	aggregatorCounter *uint64
-	producerCounter   map[string]uint64
+	aggregatorCounter *int
+	producerCounter   map[string]int
 	aggregatorTable   map[string]*Aggregator
 	producerTable     map[string]*Producer
+	dkgIndexTable     map[int]*Producer
+	publicKeyTable    map[kyber.Point]*Producer
 )
 
 func init() {
 	if aggregatorCounter == nil {
-		var aggregatorCounterValue uint64
+		var aggregatorCounterValue int
 		aggregatorCounter = &aggregatorCounterValue
 	}
 	if producerCounter == nil {
-		producerCounter = make(map[string]uint64)
+		producerCounter = make(map[string]int)
 	}
 	if aggregatorTable == nil {
 		aggregatorTable = make(map[string]*Aggregator)
@@ -48,25 +52,30 @@ func init() {
 	if producerTable == nil {
 		producerTable = make(map[string]*Producer)
 	}
+	if dkgIndexTable == nil {
+		dkgIndexTable = make(map[int]*Producer)
+	}
+	if publicKeyTable == nil {
+		publicKeyTable = make(map[kyber.Point]*Producer)
+	}
 }
 
 func getAggregatorId() string {
 	if aggregatorCounter == nil {
 		return ""
 	}
-	aggregatorId := strconv.FormatUint(*aggregatorCounter, 10)
+	aggregatorId := strconv.Itoa(*aggregatorCounter)
 	*aggregatorCounter++
 	return aggregatorId
 }
 
-func getProducerId(aggregatorId string) (string, uint64) {
+func getProducerId(aggregatorId string) (string, int) {
 	if _, ok := producerCounter[aggregatorId]; !ok {
-		producerCounter[aggregatorId] = 1
-	} else {
-		producerCounter[aggregatorId]++
+		producerCounter[aggregatorId] = 0
 	}
-	producerId := strconv.FormatUint(producerCounter[aggregatorId], 10)
-	return fmt.Sprintf("%v.%v", producerId, aggregatorId), producerCounter[aggregatorId]
+	producerId := producerCounter[aggregatorId]
+	producerCounter[aggregatorId]++
+	return fmt.Sprintf("%v.%v", producerId, aggregatorId), producerId
 }
 
 func getAggregator(aggregatorId string) *Aggregator {
@@ -96,9 +105,31 @@ func getProducer(producerId string) *Producer {
 	return nil
 }
 
+func getProducerByDkgIndex(index int) *Producer {
+	if dkgIndexTable == nil {
+		return nil
+	}
+	if producer, ok := dkgIndexTable[index]; ok {
+		return producer
+	}
+	return nil
+}
+
+func getProducerByPublicKey(publicKey kyber.Point) *Producer {
+	if publicKeyTable == nil {
+		return nil
+	}
+	if producer, ok := publicKeyTable[publicKey]; ok {
+		return producer
+	}
+	return nil
+}
+
 func setProducer(producer *Producer) {
 	if producerTable == nil {
 		return
 	}
 	producerTable[producer.Id] = producer
+	dkgIndexTable[producer.Dkg.GetIndex()] = producer
+	publicKeyTable[producer.PublicKey] = producer
 }

@@ -26,11 +26,12 @@ import (
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
+	pedersenvss "go.dedis.ch/kyber/v3/share/vss/pedersen"
 )
 
 func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
-	if dkg.PedersenDkg == nil {
-		log.Error("nil pedersen dkg", "err", utils.NilPtrDerefErr)
+	if dkg == nil || dkg.PedersenDkg == nil {
+		log.Error("nil dkg", "err", utils.NilPtrDerefErr)
 		return utils.NilPtrDerefErr
 	}
 
@@ -40,13 +41,13 @@ func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
 		return err
 	}
 
-	dkg.pedersendkgDeals = pedersenDkgDeals
+	dkg.PedersendkgDeals = pedersenDkgDeals
 	return nil
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *pedersendkg.Deal) (*pedersendkg.Response, bool) {
-	if dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
-		log.Error("nil pedersen dkg or deal")
+	if dkg == nil || dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
+		log.Error("nil dkg or deal")
 		return nil, false
 	}
 
@@ -54,16 +55,20 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *peder
 	if response == nil || err != nil {
 		return nil, false
 	}
-	return response, true
+	return response, response.Response.Status == pedersenvss.StatusApproval
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgResponse *pedersendkg.Response) bool {
-	if dkg.PedersenDkg == nil || pedersenDkgResponse == nil {
-		log.Error("nil pedersen dkg or response")
+	if dkg == nil || dkg.PedersenDkg == nil || pedersenDkgResponse == nil {
+		log.Error("nil dkg or response")
 		return false
 	}
 
-	_, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
-	// todo: handle justification?
-	return err == nil
+	if uint32(dkg.index) == pedersenDkgResponse.Response.Index {
+		log.Warn("response from same origin not verified", "index", dkg.index)
+		return true
+	}
+
+	justification, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
+	return justification == nil && err == nil
 }
