@@ -34,22 +34,25 @@ import (
 )
 
 const (
-	dkgCount = 3
+	DkgCount = 3
+
+	VerifiableMessage   = "ok"
+	UnverifiableMessage = "not ok"
 )
 
 func TestPedersenDkg(t *testing.T) {
-	threshold := pedersenvss.MinimumT(dkgCount)
+	threshold := pedersenvss.MinimumT(DkgCount)
 
 	blsSuite := GetBlsSuite()
 
-	privateKeys, publicKeys := make([]kyber.Scalar, dkgCount), make([]kyber.Point, dkgCount)
-	for i := 0; i < dkgCount; i++ {
+	privateKeys, publicKeys := make([]kyber.Scalar, DkgCount), make([]kyber.Point, DkgCount)
+	for i := 0; i < DkgCount; i++ {
 		pair := key.NewKeyPair(blsSuite)
 		privateKeys[i], publicKeys[i] = pair.Private, pair.Public
 	}
 
-	dkgs := make([]*DistributedKeyGenerator, dkgCount)
-	for i := 0; i < dkgCount; i++ {
+	dkgs := make([]*DistributedKeyGenerator, DkgCount)
+	for i := 0; i < DkgCount; i++ {
 		dkg, err := CreateDistributedKeyGenerator(blsSuite, privateKeys[i], publicKeys, threshold)
 		require.NotNil(t, dkg)
 		require.NotNil(t, dkg.PedersenDkg)
@@ -58,14 +61,14 @@ func TestPedersenDkg(t *testing.T) {
 		dkgs[i] = dkg
 	}
 
-	for i := 0; i < dkgCount; i++ {
+	for i := 0; i < DkgCount; i++ {
 		err := dkgs[i].CreatePedersenDkgDeals()
 		require.Nil(t, err)
-		assert.Equal(t, dkgCount-1, len(dkgs[i].pedersendkgDeals))
+		assert.Equal(t, DkgCount-1, len(dkgs[i].pedersendkgDeals))
 	}
 
-	pedersenDkgResponsesSlice := make([]map[int]*pedersendkg.Response, dkgCount)
-	for i := 0; i < dkgCount; i++ {
+	pedersenDkgResponsesSlice := make([]map[int]*pedersendkg.Response, DkgCount)
+	for i := 0; i < DkgCount; i++ {
 		pedersenDkgResponsesSlice[i] = make(map[int]*pedersendkg.Response)
 		for j, pedersenDkgDeal := range dkgs[i].pedersendkgDeals {
 			pedersenDkgResponse, ok := dkgs[j].VerifyPedersenDkgDeal(pedersenDkgDeal)
@@ -87,5 +90,21 @@ func TestPedersenDkg(t *testing.T) {
 	for _, dkg := range dkgs {
 		ok := dkg.PedersenDkg.Certified()
 		assert.True(t, ok)
+	}
+
+	signatures := make([][]byte, 0)
+	for i, dkg := range dkgs {
+		if i < threshold {
+			signatures = append(signatures, Sign(blsSuite, dkg.PedersenDkg, VerifiableMessage))
+		} else {
+			signatures = append(signatures, Sign(blsSuite, dkg.PedersenDkg, UnverifiableMessage))
+		}
+	}
+	for _, dkg := range dkgs {
+		signature, ok := Verify(blsSuite, dkg.PedersenDkg, signatures, threshold, DkgCount, VerifiableMessage)
+		assert.NotNil(t, signature)
+		assert.True(t, ok)
+		_, ok = Verify(blsSuite, dkg.PedersenDkg, signatures, threshold, DkgCount, UnverifiableMessage)
+		assert.False(t, ok)
 	}
 }
