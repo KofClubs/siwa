@@ -23,6 +23,7 @@ THE SOFTWARE.
 package crypto
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,13 +65,13 @@ func TestPedersenDkg(t *testing.T) {
 	for i := 0; i < DkgCount; i++ {
 		err := dkgs[i].CreatePedersenDkgDeals()
 		require.Nil(t, err)
-		assert.Equal(t, DkgCount-1, len(dkgs[i].pedersendkgDeals))
+		assert.Equal(t, DkgCount-1, len(dkgs[i].PedersendkgDeals))
 	}
 
 	pedersenDkgResponsesSlice := make([]map[int]*pedersendkg.Response, DkgCount)
 	for i := 0; i < DkgCount; i++ {
 		pedersenDkgResponsesSlice[i] = make(map[int]*pedersendkg.Response)
-		for j, pedersenDkgDeal := range dkgs[i].pedersendkgDeals {
+		for j, pedersenDkgDeal := range dkgs[i].PedersendkgDeals {
 			pedersenDkgResponse, ok := dkgs[j].VerifyPedersenDkgDeal(pedersenDkgDeal)
 			assert.NotNil(t, pedersenDkgResponse)
 			assert.True(t, ok)
@@ -92,19 +93,30 @@ func TestPedersenDkg(t *testing.T) {
 		assert.True(t, ok)
 	}
 
+	for i, signer := range dkgs {
+		message := fmt.Sprintf("msg_%v", i)
+		signature := Sign(blsSuite, signer, message)
+		for _, verifier := range dkgs {
+			ok := Verify(blsSuite, verifier, message, signature)
+			assert.True(t, ok)
+			ok = Verify(blsSuite, verifier, "msg_", signature)
+			assert.False(t, ok)
+		}
+	}
+
 	signatures := make([][]byte, 0)
 	for i, dkg := range dkgs {
 		if i < threshold {
-			signatures = append(signatures, Sign(blsSuite, dkg.PedersenDkg, VerifiableMessage))
+			signatures = append(signatures, Sign(blsSuite, dkg, VerifiableMessage))
 		} else {
-			signatures = append(signatures, Sign(blsSuite, dkg.PedersenDkg, UnverifiableMessage))
+			signatures = append(signatures, Sign(blsSuite, dkg, UnverifiableMessage))
 		}
 	}
 	for _, dkg := range dkgs {
-		signature, ok := Verify(blsSuite, dkg.PedersenDkg, signatures, threshold, DkgCount, VerifiableMessage)
+		signature, ok := VerifyAll(blsSuite, dkg, threshold, DkgCount, VerifiableMessage, signatures)
 		assert.NotNil(t, signature)
 		assert.True(t, ok)
-		_, ok = Verify(blsSuite, dkg.PedersenDkg, signatures, threshold, DkgCount, UnverifiableMessage)
+		_, ok = VerifyAll(blsSuite, dkg, threshold, DkgCount, UnverifiableMessage, signatures)
 		assert.False(t, ok)
 	}
 }

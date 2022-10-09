@@ -43,13 +43,13 @@ type ProducerEntity struct {
 
 type Producer struct {
 	Id, AggregatorId string
-	Rank             uint64
+	Rank             int
 	Suite            *bn256.Suite
 	privateKey       kyber.Scalar
 	PublicKey        kyber.Point
 	Dkg              *crypto.DistributedKeyGenerator
 	ZmqSocketSet     *zmq.SocketSet
-	Querier          *querier.Querier
+	Querier          querier.Querier
 }
 
 func (producerEntity *ProducerEntity) CreateProducer() *Producer {
@@ -128,11 +128,11 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		}
 		// because publicKeys[0] is publicKey, index of dkg is 0
 		dkg.SetIndex(0)
-		// assert: len(publicKeys) > 1
-		publicKeysOfPeerProducer := publicKeys[1:]
+
 		producersToUpdate = make(map[*Producer]*crypto.DistributedKeyGenerator)
-		for index, publicKeyOfPeerProducer := range publicKeysOfPeerProducer {
-			peerProducer := getProducerByPublicKey(publicKeyOfPeerProducer)
+		// assert: len(publicKeys) > 1
+		for index := 1; index < len(publicKeys); index++ {
+			peerProducer := getProducerByPublicKey(publicKeys[index])
 			dkgOfPeerProducer, err := crypto.CreateDistributedKeyGenerator(suite, peerProducer.privateKey, publicKeys, threshold)
 			if err != nil {
 				log.Error("fail to update distributed key generator of peer producer when creating producer",
@@ -153,7 +153,7 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		PublicKey:    publicKey,
 		Dkg:          dkg,
 		ZmqSocketSet: zmqSocketSet,
-		Querier:      &querierOfProducer,
+		Querier:      querierOfProducer,
 	}
 	setProducer(producer)
 	for peerProducer, dkgOfPeerProducer := range producersToUpdate {
@@ -161,4 +161,35 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		setProducer(peerProducer)
 	}
 	return producer
+}
+
+func (producer *Producer) Query(expression string) (string, []byte) {
+	if producer == nil {
+		log.Error("nil producer")
+		return "", nil
+	}
+
+	message := producer.Querier.Do(expression)
+	signature := crypto.Sign(producer.Suite, producer.Dkg, message)
+	return message, signature
+}
+
+func (producer *Producer) Verify(message string, signature []byte) bool {
+	if producer == nil {
+		log.Error("nil producer")
+		return false
+	}
+
+	return crypto.Verify(producer.Suite, producer.Dkg, message, signature)
+}
+
+func (producer *Producer) VerifyAll(message string, signatures [][]byte) ([]byte, bool) {
+	if producer == nil {
+		log.Error("nil producer")
+		return nil, false
+	}
+
+	aggregator := getAggregator(producer.AggregatorId)
+	return crypto.VerifyAll(producer.Suite, producer.Dkg, aggregator.Threshold, len(aggregator.ProducerIds),
+		message, signatures)
 }

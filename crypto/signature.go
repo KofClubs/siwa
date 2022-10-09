@@ -26,16 +26,21 @@ import (
 	"github.com/MonteCarloClub/log"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/share"
-	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 	"go.dedis.ch/kyber/v3/sign/tbls"
 )
 
-func Sign(signerSuite *bn256.Suite, signerDkg *pedersendkg.DistKeyGenerator, message string) []byte {
-	distKey, err := signerDkg.DistKeyShare()
+func Sign(signerSuite *bn256.Suite, signerDkg *DistributedKeyGenerator, message string) []byte {
+	if signerSuite == nil || signerDkg == nil {
+		log.Error("nil suite or dkg of signer")
+		return nil
+	}
+
+	distKey, err := signerDkg.PedersenDkg.DistKeyShare()
 	if err != nil {
 		log.Error("fail to generate distributed key of signer", "err", err)
 		return nil
 	}
+
 	signatures, err := tbls.Sign(signerSuite, distKey.Share, []byte(message))
 	if err != nil {
 		log.Error("fail to sign message of signer", "message", message, "err", err)
@@ -44,13 +49,36 @@ func Sign(signerSuite *bn256.Suite, signerDkg *pedersendkg.DistKeyGenerator, mes
 	return signatures
 }
 
-func Verify(verifierSuite *bn256.Suite, verifierDkg *pedersendkg.DistKeyGenerator, signatures [][]byte, t, n int,
-	message string) ([]byte, bool) {
-	distKey, err := verifierDkg.DistKeyShare()
+func Verify(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, message string, signature []byte) bool {
+	if verifierSuite == nil || verifierDkg == nil {
+		log.Error("nil suite or dkg of verifier")
+		return false
+	}
+
+	distKey, err := verifierDkg.PedersenDkg.DistKeyShare()
+	if err != nil {
+		log.Error("fail to generate distributed key of verifier", "err", err)
+		return false
+	}
+
+	pubPoly := share.NewPubPoly(verifierSuite.G2(), verifierSuite.G2().Point().Base(), distKey.Commits)
+	err = tbls.Verify(verifierSuite, pubPoly, []byte(message), signature)
+	return err == nil
+}
+
+func VerifyAll(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, t, n int,
+	message string, signatures [][]byte) ([]byte, bool) {
+	if verifierSuite == nil || verifierDkg == nil {
+		log.Error("nil suite or dkg of verifier")
+		return nil, false
+	}
+
+	distKey, err := verifierDkg.PedersenDkg.DistKeyShare()
 	if err != nil {
 		log.Error("fail to generate distributed key of verifier", "err", err)
 		return nil, false
 	}
+
 	pubPoly := share.NewPubPoly(verifierSuite.G2(), verifierSuite.G2().Point().Base(), distKey.Commits)
 	signature, err := tbls.Recover(verifierSuite, pubPoly, []byte(message), signatures, t, n)
 	if err != nil {

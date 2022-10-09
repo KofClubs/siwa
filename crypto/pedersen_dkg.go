@@ -30,8 +30,8 @@ import (
 )
 
 func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
-	if dkg.PedersenDkg == nil {
-		log.Error("nil pedersen dkg", "err", utils.NilPtrDerefErr)
+	if dkg == nil || dkg.PedersenDkg == nil {
+		log.Error("nil dkg", "err", utils.NilPtrDerefErr)
 		return utils.NilPtrDerefErr
 	}
 
@@ -41,13 +41,13 @@ func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
 		return err
 	}
 
-	dkg.pedersendkgDeals = pedersenDkgDeals
+	dkg.PedersendkgDeals = pedersenDkgDeals
 	return nil
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *pedersendkg.Deal) (*pedersendkg.Response, bool) {
-	if dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
-		log.Error("nil pedersen dkg or deal")
+	if dkg == nil || dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
+		log.Error("nil dkg or deal")
 		return nil, false
 	}
 
@@ -59,8 +59,8 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *peder
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgResponse *pedersendkg.Response) bool {
-	if dkg.PedersenDkg == nil || pedersenDkgResponse == nil {
-		log.Error("nil pedersen dkg or response")
+	if dkg == nil || dkg.PedersenDkg == nil || pedersenDkgResponse == nil {
+		log.Error("nil dkg or response")
 		return false
 	}
 

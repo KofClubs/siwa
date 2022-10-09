@@ -23,10 +23,14 @@ THE SOFTWARE.
 package node
 
 import (
+	"context"
 	"testing"
 
 	"github.com/KofClubs/siwa/crypto"
+	"github.com/KofClubs/siwa/node/querier"
 	"github.com/MonteCarloClub/log"
+	"github.com/stretchr/testify/assert"
+	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 	"go.dedis.ch/kyber/v3/util/key"
 )
 
@@ -45,6 +49,34 @@ var (
 
 func genRandomPrivateKey() string {
 	return key.NewKeyPair(crypto.GetBlsSuite()).Private.String()
+}
+
+func fullCommunicate() {
+	// tested by TestPedersenDkg
+	for _, producer := range producers {
+		_ = producer.Dkg.CreatePedersenDkgDeals()
+	}
+
+	pedersenDkgResponses := make([]*pedersendkg.Response, 0)
+
+	for _, producer := range producers {
+		for j, pedersenDkgDeal := range producer.Dkg.PedersendkgDeals {
+			pedersenDkgResponse, _ := getProducerByDkgIndex(j).Dkg.VerifyPedersenDkgDeal(pedersenDkgDeal)
+			pedersenDkgResponses = append(pedersenDkgResponses, pedersenDkgResponse)
+		}
+	}
+
+	for _, pedersenDkgResponse := range pedersenDkgResponses {
+		for _, producer := range producers {
+			producer.Dkg.VerifyPedersenDkgResponse(pedersenDkgResponse)
+		}
+	}
+}
+
+func initRedis() {
+	redisQuerier := &querier.RedisQuerier{}
+	redisQuerier.Init("localhost:6379")
+	_ = redisQuerier.RedisClient.Set(context.Background(), "k1", "v1", 0).Err()
 }
 
 func TestQuery(t *testing.T) {
@@ -71,4 +103,25 @@ func TestQuery(t *testing.T) {
 		producers = append(producers, producerEntity.CreateProducer())
 		log.Info("producer created", "id", producers[len(producers)-1].Id)
 	}
+
+	// 3. fully communicate to certify all dkgs
+	fullCommunicate()
+
+	// 4. query and aggregate result
+	initRedis()
+	verifier := getProducer(aggregator.SelectVerifierId())
+	log.Info("verifier selected randomly", "verifier id", verifier.Id)
+	expression := "k1"
+	expectedValue := "v1"
+	signatures := make([][]byte, 0)
+	for _, producer := range producers {
+		message, signature := producer.Query(expression)
+		assert.Equal(t, expectedValue, message)
+		ok := verifier.Verify(message, signature)
+		assert.True(t, ok)
+		signatures = append(signatures, signature)
+	}
+	signature, ok := verifier.VerifyAll(expectedValue, signatures)
+	assert.NotNil(t, signature)
+	assert.True(t, ok)
 }

@@ -34,7 +34,7 @@ type DistributedKeyGenerator struct {
 	index int
 
 	PedersenDkg      *pedersendkg.DistKeyGenerator
-	pedersendkgDeals map[int]*pedersendkg.Deal
+	PedersendkgDeals map[int]*pedersendkg.Deal
 }
 
 func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, publicKeys []kyber.Point, threshold int) (*DistributedKeyGenerator, error) {
