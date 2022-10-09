@@ -108,6 +108,7 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		return nil
 	}
 	var dkg *crypto.DistributedKeyGenerator
+	var producersToUpdate map[*Producer]*crypto.DistributedKeyGenerator
 	if threshold < 2 {
 		log.Warn("distributed key generators not updated, threshold should not be less than 2",
 			"private key", producerEntity.PrivateKey)
@@ -125,6 +126,22 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 			}
 			return nil
 		}
+		// because publicKeys[0] is publicKey, index of dkg is 0
+		dkg.SetIndex(0)
+		// assert: len(publicKeys) > 1
+		publicKeysOfPeerProducer := publicKeys[1:]
+		producersToUpdate = make(map[*Producer]*crypto.DistributedKeyGenerator)
+		for index, publicKeyOfPeerProducer := range publicKeysOfPeerProducer {
+			peerProducer := getProducerByPublicKey(publicKeyOfPeerProducer)
+			dkgOfPeerProducer, err := crypto.CreateDistributedKeyGenerator(suite, peerProducer.privateKey, publicKeys, threshold)
+			if err != nil {
+				log.Error("fail to update distributed key generator of peer producer when creating producer",
+					"peer producer id", peerProducer.Id, "err", err)
+				return nil
+			}
+			dkgOfPeerProducer.SetIndex(index)
+			producersToUpdate[peerProducer] = dkgOfPeerProducer
+		}
 	}
 
 	producer := &Producer{
@@ -139,5 +156,9 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		Querier:      &querierOfProducer,
 	}
 	setProducer(producer)
+	for peerProducer, dkgOfPeerProducer := range producersToUpdate {
+		peerProducer.Dkg = dkgOfPeerProducer
+		setProducer(peerProducer)
+	}
 	return producer
 }

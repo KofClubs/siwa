@@ -31,6 +31,8 @@ import (
 )
 
 type DistributedKeyGenerator struct {
+	index int
+
 	PedersenDkg      *pedersendkg.DistKeyGenerator
 	pedersendkgDeals map[int]*pedersendkg.Deal
 }
@@ -50,4 +52,20 @@ func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, 
 	return &DistributedKeyGenerator{
 		PedersenDkg: pedersenDkg,
 	}, nil
+}
+
+func (dkg *DistributedKeyGenerator) GetIndex() int {
+	if dkg == nil {
+		log.Error("nil dkg")
+		return -1
+	}
+	return dkg.index
+}
+
+func (dkg *DistributedKeyGenerator) SetIndex(index int) {
+	if dkg == nil {
+		log.Error("nil dkg")
+		return
+	}
+	dkg.index = index
 }

@@ -25,6 +25,8 @@ package node
 import (
 	"fmt"
 	"strconv"
+
+	"go.dedis.ch/kyber/v3"
 )
 
 var (
@@ -32,6 +34,7 @@ var (
 	producerCounter   map[string]uint64
 	aggregatorTable   map[string]*Aggregator
 	producerTable     map[string]*Producer
+	publicKeyTable    map[kyber.Point]*Producer
 )
 
 func init() {
@@ -47,6 +50,9 @@ func init() {
 	}
 	if producerTable == nil {
 		producerTable = make(map[string]*Producer)
+	}
+	if publicKeyTable == nil {
+		publicKeyTable = make(map[kyber.Point]*Producer)
 	}
 }
 
@@ -96,9 +102,20 @@ func getProducer(producerId string) *Producer {
 	return nil
 }
 
+func getProducerByPublicKey(publicKey kyber.Point) *Producer {
+	if publicKeyTable == nil {
+		return nil
+	}
+	if producer, ok := publicKeyTable[publicKey]; ok {
+		return producer
+	}
+	return nil
+}
+
 func setProducer(producer *Producer) {
 	if producerTable == nil {
 		return
 	}
 	producerTable[producer.Id] = producer
+	publicKeyTable[producer.PublicKey] = producer
 }

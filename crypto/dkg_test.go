@@ -29,11 +29,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.dedis.ch/kyber/v3"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
+	pedersenvss "go.dedis.ch/kyber/v3/share/vss/pedersen"
 	"go.dedis.ch/kyber/v3/util/key"
 )
 
+const (
+	dkgCount = 3
+)
+
 func TestPedersenDkg(t *testing.T) {
-	dkgCount, threshold := 3, 2
+	threshold := pedersenvss.MinimumT(dkgCount)
 
 	blsSuite := GetBlsSuite()
 
@@ -49,6 +54,7 @@ func TestPedersenDkg(t *testing.T) {
 		require.NotNil(t, dkg)
 		require.NotNil(t, dkg.PedersenDkg)
 		require.Nil(t, err)
+		dkg.SetIndex(i)
 		dkgs[i] = dkg
 	}
 
@@ -69,10 +75,17 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < dkgCount; i++ {
-		for _, pedersenDkgResponse := range pedersenDkgResponsesSlice[i] {
-			ok := dkgs[i].VerifyPedersenDkgResponse(pedersenDkgResponse)
-			assert.True(t, ok)
+	for _, pedersenDkgResponses := range pedersenDkgResponsesSlice {
+		for _, pedersenDkgResponse := range pedersenDkgResponses {
+			for _, dkg := range dkgs {
+				ok := dkg.VerifyPedersenDkgResponse(pedersenDkgResponse)
+				assert.True(t, ok)
+			}
 		}
+	}
+
+	for _, dkg := range dkgs {
+		ok := dkg.PedersenDkg.Certified()
+		assert.True(t, ok)
 	}
 }

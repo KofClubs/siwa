@@ -26,6 +26,7 @@ import (
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
+	pedersenvss "go.dedis.ch/kyber/v3/share/vss/pedersen"
 )
 
 func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
@@ -54,7 +55,7 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *peder
 	if response == nil || err != nil {
 		return nil, false
 	}
-	return response, true
+	return response, response.Response.Status == pedersenvss.StatusApproval
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgResponse *pedersendkg.Response) bool {
@@ -63,7 +64,11 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgRespons
 		return false
 	}
 
-	_, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
-	// todo: handle justification?
-	return err == nil
+	if uint32(dkg.index) == pedersenDkgResponse.Response.Index {
+		log.Warn("response from same origin not verified", "index", dkg.index)
+		return true
+	}
+
+	justification, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
+	return justification == nil && err == nil
 }
