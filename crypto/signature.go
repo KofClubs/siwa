@@ -66,7 +66,7 @@ func Verify(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, me
 	return err == nil
 }
 
-func VerifyAll(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, t, n int,
+func Recover(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, t, n int,
 	message string, signatures [][]byte) ([]byte, bool) {
 	if verifierSuite == nil || verifierDkg == nil || verifierDkg.PedersenDkg == nil {
 		log.Error("nil suite or dkg of verifier")

@@ -126,7 +126,7 @@ func TestQuery(t *testing.T) {
 		assert.True(t, ok)
 		signatures = append(signatures, signature)
 	}
-	signature, ok := verifier.VerifyAll(expectedValue, signatures)
+	signature, ok := verifier.Recover(expectedValue, signatures)
 	assert.NotNil(t, signature)
 	assert.True(t, ok)
 }

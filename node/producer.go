@@ -191,7 +191,7 @@ func (producer *Producer) Verify(message string, signature []byte) bool {
 	return crypto.Verify(producer.Suite, producer.Dkg, message, signature)
 }
 
-func (producer *Producer) VerifyAll(message string, signatures [][]byte) ([]byte, bool) {
+func (producer *Producer) Recover(message string, signatures [][]byte) ([]byte, bool) {
 	if producer == nil {
 		log.Error("nil producer")
 		return nil, false
@@ -203,6 +203,6 @@ func (producer *Producer) VerifyAll(message string, signatures [][]byte) ([]byte
 			"aggregator id", producer.AggregatorId)
 	}
 
-	return crypto.VerifyAll(producer.Suite, producer.Dkg, aggregator.Threshold, len(aggregator.ProducerIds),
+	return crypto.Recover(producer.Suite, producer.Dkg, aggregator.Threshold, len(aggregator.ProducerIds),
 		message, signatures)
 }

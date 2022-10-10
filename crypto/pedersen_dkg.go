@@ -25,6 +25,7 @@ package crypto
 import (
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
+	"go.dedis.ch/kyber/v3"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 	pedersenvss "go.dedis.ch/kyber/v3/share/vss/pedersen"
 )
@@ -71,4 +72,19 @@ func (dkg *DistributedKeyGenerator) VerifyPedersenDkgResponse(pedersenDkgRespons
 
 	justification, err := dkg.PedersenDkg.ProcessResponse(pedersenDkgResponse)
 	return justification == nil && err == nil
+}
+
+func (dkg *DistributedKeyGenerator) GetDistributedPublicKey() (kyber.Point, error) {
+	if dkg == nil || dkg.PedersenDkg == nil {
+		log.Error("nil dkg", "err", utils.NilPtrDerefErr)
+		return nil, utils.NilPtrDerefErr
+	}
+
+	distKey, err := dkg.PedersenDkg.DistKeyShare()
+	if err != nil {
+		log.Error("fail to generate distributed key", "err", err)
+		return nil, err
+	}
+
+	return distKey.Public(), nil
 }
