@@ -117,8 +117,8 @@ func (aggregator *Aggregator) deleteProducer(producerId string) error {
 }
 
 func (aggregator *Aggregator) SelectVerifierId() string {
-	if aggregator == nil || aggregator.ProducerIds == nil {
-		log.Error("nil aggregator or producer ids", "err", utils.NilPtrDeref)
+	if aggregator == nil || aggregator.ProducerIds == nil || len(aggregator.ProducerIds) == 0 {
+		log.Error("nil or empty aggregator or producer ids", "err", utils.NilPtrDeref)
 	}
 
 	timestamp := time.Now().UnixNano()

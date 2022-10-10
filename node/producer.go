@@ -101,7 +101,7 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 		return nil
 	}
 
-	// Finally add the producer, which needs to be rolled back if its subsequent operations fail.
+	// finally add the producer, which needs to be rolled back if its subsequent operations fail
 	publicKeys, threshold, err := aggregator.addProducer(id, publicKey)
 	if err != nil {
 		log.Error("fail to add producer", "private key", producerEntity.PrivateKey, "err", err)
@@ -163,9 +163,17 @@ func (producerEntity *ProducerEntity) CreateProducer() *Producer {
 	return producer
 }
 
-func (producer *Producer) Query(expression string) (string, []byte) {
-	if producer == nil {
+func (producer *Producer) ReadyToQuery() bool {
+	if producer == nil || producer.Dkg == nil || producer.Dkg.PedersenDkg == nil {
 		log.Error("nil producer")
+		return false
+	}
+	return producer.Dkg.PedersenDkg.Certified()
+}
+
+func (producer *Producer) Query(expression string) (string, []byte) {
+	if producer == nil || producer.Querier == nil {
+		log.Error("nil producer or querier")
 		return "", nil
 	}
 
@@ -190,6 +198,11 @@ func (producer *Producer) VerifyAll(message string, signatures [][]byte) ([]byte
 	}
 
 	aggregator := getAggregator(producer.AggregatorId)
+	if aggregator == nil {
+		log.Error("fail to get aggregator", "producer id", producer.Id,
+			"aggregator id", producer.AggregatorId)
+	}
+
 	return crypto.VerifyAll(producer.Suite, producer.Dkg, aggregator.Threshold, len(aggregator.ProducerIds),
 		message, signatures)
 }

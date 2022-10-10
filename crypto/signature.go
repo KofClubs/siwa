@@ -30,8 +30,8 @@ import (
 )
 
 func Sign(signerSuite *bn256.Suite, signerDkg *DistributedKeyGenerator, message string) []byte {
-	if signerSuite == nil || signerDkg == nil {
-		log.Error("nil suite or dkg of signer")
+	if signerDkg == nil || signerDkg.PedersenDkg == nil {
+		log.Error("nil dkg of signer")
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func Sign(signerSuite *bn256.Suite, signerDkg *DistributedKeyGenerator, message 
 }
 
 func Verify(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, message string, signature []byte) bool {
-	if verifierSuite == nil || verifierDkg == nil {
+	if verifierSuite == nil || verifierDkg == nil || verifierDkg.PedersenDkg == nil {
 		log.Error("nil suite or dkg of verifier")
 		return false
 	}
@@ -68,7 +68,7 @@ func Verify(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, me
 
 func VerifyAll(verifierSuite *bn256.Suite, verifierDkg *DistributedKeyGenerator, t, n int,
 	message string, signatures [][]byte) ([]byte, bool) {
-	if verifierSuite == nil || verifierDkg == nil {
+	if verifierSuite == nil || verifierDkg == nil || verifierDkg.PedersenDkg == nil {
 		log.Error("nil suite or dkg of verifier")
 		return nil, false
 	}

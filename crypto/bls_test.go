@@ -43,7 +43,7 @@ func TestBls(t *testing.T) {
 	assert.Equal(t, privateKeyString, blsPrivateKey.String())
 
 	blsPublicKey, err := GetBlsPublicKey(blsSuite, blsPrivateKey)
-	require.Nil(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, publicKey, blsPublicKey)
 }
 

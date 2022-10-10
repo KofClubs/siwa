@@ -30,6 +30,7 @@ import (
 	"github.com/KofClubs/siwa/node/querier"
 	"github.com/MonteCarloClub/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
 	"go.dedis.ch/kyber/v3/util/key"
 )
@@ -101,11 +102,15 @@ func TestQuery(t *testing.T) {
 	}
 	for _, producerEntity := range producerEntities {
 		producers = append(producers, producerEntity.CreateProducer())
+		require.NotNil(t, producers[len(producers)-1])
 		log.Info("producer created", "id", producers[len(producers)-1].Id)
 	}
 
 	// 3. fully communicate to certify all dkgs
 	fullCommunicate()
+	for _, producer := range producers {
+		assert.True(t, producer.ReadyToQuery())
+	}
 
 	// 4. query and aggregate result
 	initRedis()

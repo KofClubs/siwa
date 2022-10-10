@@ -46,8 +46,8 @@ func (dkg *DistributedKeyGenerator) CreatePedersenDkgDeals() error {
 }
 
 func (dkg *DistributedKeyGenerator) VerifyPedersenDkgDeal(pedersenDkgDeal *pedersendkg.Deal) (*pedersendkg.Response, bool) {
-	if dkg == nil || dkg.PedersenDkg == nil || pedersenDkgDeal == nil {
-		log.Error("nil dkg or deal")
+	if dkg == nil || dkg.PedersenDkg == nil {
+		log.Error("nil dkg")
 		return nil, false
 	}
 
