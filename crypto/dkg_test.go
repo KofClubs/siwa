@@ -23,6 +23,7 @@ THE SOFTWARE.
 package crypto
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -104,8 +105,7 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 
-	var signature []byte
-	var ok bool
+	var expectedSignature []byte
 	signatures := make([][]byte, 0)
 	for i, dkg := range dkgs {
 		if i < threshold {
@@ -115,11 +115,15 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 	for _, dkg := range dkgs {
-		signature, ok = Recover(blsSuite, dkg, threshold, DkgCount, VerifiableMessage, signatures)
-		assert.NotNil(t, signature)
+		actualSignature, ok := Recover(blsSuite, dkg, threshold, DkgCount, VerifiableMessage, signatures)
 		assert.True(t, ok)
 		_, ok = Recover(blsSuite, dkg, threshold, DkgCount, UnverifiableMessage, signatures)
 		assert.False(t, ok)
+		if expectedSignature == nil {
+			expectedSignature = actualSignature
+		} else {
+			assert.True(t, bytes.Equal(expectedSignature, actualSignature))
+		}
 	}
 
 	var expectedDistributedPublicKey kyber.Point
@@ -134,5 +138,5 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 
-	// todo: verify(expectedDistributedPublicKey, VerifiableMessage, signature)
+	// todo: verify(expectedDistributedPublicKey, VerifiableMessage, expectedSignature)
 }
