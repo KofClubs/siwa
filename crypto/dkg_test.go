@@ -23,6 +23,7 @@ THE SOFTWARE.
 package crypto
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -104,6 +105,7 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 
+	var expectedSignature []byte
 	signatures := make([][]byte, 0)
 	for i, dkg := range dkgs {
 		if i < threshold {
@@ -113,10 +115,28 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 	for _, dkg := range dkgs {
-		signature, ok := VerifyAll(blsSuite, dkg, threshold, DkgCount, VerifiableMessage, signatures)
-		assert.NotNil(t, signature)
+		actualSignature, ok := Recover(blsSuite, dkg, threshold, DkgCount, VerifiableMessage, signatures)
 		assert.True(t, ok)
-		_, ok = VerifyAll(blsSuite, dkg, threshold, DkgCount, UnverifiableMessage, signatures)
+		_, ok = Recover(blsSuite, dkg, threshold, DkgCount, UnverifiableMessage, signatures)
 		assert.False(t, ok)
+		if expectedSignature == nil {
+			expectedSignature = actualSignature
+		} else {
+			assert.True(t, bytes.Equal(expectedSignature, actualSignature))
+		}
 	}
+
+	var expectedDistributedPublicKey kyber.Point
+	for _, dkg := range dkgs {
+		actualDistributedPublicKey, err := dkg.GetDistributedPublicKey()
+		assert.Nil(t, err)
+		if expectedDistributedPublicKey == nil {
+			expectedDistributedPublicKey = actualDistributedPublicKey
+		} else {
+			require.NotNil(t, actualDistributedPublicKey)
+			assert.True(t, actualDistributedPublicKey.Equal(expectedDistributedPublicKey))
+		}
+	}
+
+	// todo: verify(expectedDistributedPublicKey, VerifiableMessage, expectedSignature)
 }

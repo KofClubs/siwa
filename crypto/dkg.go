@@ -24,7 +24,6 @@ package crypto
 
 import (
 	"github.com/MonteCarloClub/log"
-	"github.com/MonteCarloClub/utils"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	pedersendkg "go.dedis.ch/kyber/v3/share/dkg/pedersen"
@@ -38,11 +37,6 @@ type DistributedKeyGenerator struct {
 }
 
 func CreateDistributedKeyGenerator(suite *bn256.Suite, privateKey kyber.Scalar, publicKeys []kyber.Point, threshold int) (*DistributedKeyGenerator, error) {
-	if suite == nil {
-		log.Error("nil suite", "err", utils.NilPtrDerefErr)
-		return nil, utils.NilPtrDerefErr
-	}
-
 	pedersenDkg, err := pedersendkg.NewDistKeyGenerator(suite, privateKey, publicKeys, threshold)
 	if err != nil {
 		log.Error("fail to create pedersen distributed key generator", "err", err)

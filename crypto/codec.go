@@ -38,13 +38,18 @@ func DecodeBlsPublicKey(suite *bn256.Suite, data []byte) (kyber.Point, error) {
 	point := suite.Point()
 	err := point.UnmarshalBinary(data)
 	if err != nil {
-		log.Error("fail to unmarshal bls public key", "data", data, "err", err)
+		log.Error("fail to unmarshal bls public key", "err", err)
 		return nil, err
 	}
 	return point, nil
 }
 
 func EncodeBlsPublicKey(blsPublicKey kyber.Point) []byte {
+	if blsPublicKey == nil {
+		log.Error("nil bls public key")
+		return nil
+	}
+
 	data, err := blsPublicKey.MarshalBinary()
 	if err != nil {
 		log.Error("fail to marshal bls public key", "err", err)
