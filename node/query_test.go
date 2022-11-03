@@ -24,6 +24,7 @@ package node
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 
 	"github.com/KofClubs/siwa/crypto"
@@ -36,16 +37,13 @@ import (
 )
 
 const (
-	BroadcastPort = "8033"
-	NodeCount     = 6
+	NodeCount    = 6
+	RedisAddress = "localhost:6379"
 )
 
 var (
-	aggregatorEntity *AggregatorEntity
-	producerEntities []*ProducerEntity
-
-	aggregator *Aggregator
-	producers  []*Producer
+	unmarshalledNodes []*UnmarshalledNode
+	nodes             []*Node
 )
 
 func genRandomPrivateKey() string {
@@ -54,73 +52,72 @@ func genRandomPrivateKey() string {
 
 func fullCommunicate() {
 	// tested by TestPedersenDkg
-	for _, producer := range producers {
-		_ = producer.Dkg.CreatePedersenDkgDeals()
+	for _, node := range nodes {
+		_ = node.Dkg.CreatePedersenDkgDeals()
 	}
 
 	pedersenDkgResponses := make([]*pedersendkg.Response, 0)
 
-	for _, producer := range producers {
-		for j, pedersenDkgDeal := range producer.Dkg.PedersendkgDeals {
-			pedersenDkgResponse, _ := getProducerByDkgIndex(j).Dkg.VerifyPedersenDkgDeal(pedersenDkgDeal)
+	for _, node := range nodes {
+		for j, pedersenDkgDeal := range node.Dkg.PedersendkgDeals {
+			pedersenDkgResponse, _ := getNodeByDkgIndex(j).Dkg.VerifyPedersenDkgDeal(pedersenDkgDeal)
 			pedersenDkgResponses = append(pedersenDkgResponses, pedersenDkgResponse)
 		}
 	}
 
 	for _, pedersenDkgResponse := range pedersenDkgResponses {
-		for _, producer := range producers {
-			producer.Dkg.VerifyPedersenDkgResponse(pedersenDkgResponse)
+		for _, node := range nodes {
+			node.Dkg.VerifyPedersenDkgResponse(pedersenDkgResponse)
 		}
 	}
 }
 
 func initRedis() {
 	redisQuerier := &querier.RedisQuerier{}
-	redisQuerier.Init("localhost:6379")
+	redisQuerier.Init(RedisAddress)
 	_ = redisQuerier.RedisClient.Set(context.Background(), "k1", "v1", 0).Err()
 }
 
 func TestQuery(t *testing.T) {
-	// 1. generate aggregator entity and create aggregator
-	aggregatorEntity = &AggregatorEntity{
-		BroadcastPort: BroadcastPort,
+	// 1. create group
+	group := &Group{
+		Id:      "0",
+		NodeIds: make(map[string]struct{}, 0),
 	}
-	log.Info("aggregator entity generated")
-	aggregator = aggregatorEntity.CreateAggregator()
-	log.Info("aggregator created", "id", aggregator.Id)
+	setGroup(group)
 
-	// 2. generate producer entities and create producers
-	for rank := 1; rank < NodeCount; rank++ {
-		producerEntities = append(producerEntities, &ProducerEntity{
-			AggregatorId:  "0",
+	// 2. generate node entities and create nodes
+	for rank := 0; rank < NodeCount; rank++ {
+		unmarshalledNodes = append(unmarshalledNodes, &UnmarshalledNode{
+			GroupId:       group.Id,
 			PrivateKey:    genRandomPrivateKey(),
 			QuerierSource: "redis",
-			RedisAddress:  "localhost:6379",
+			RedisAddress:  RedisAddress,
 		})
-		log.Info("producer entity generated",
-			"private key", producerEntities[len(producerEntities)-1].PrivateKey)
+		log.Info("unmarshalled nodes generated",
+			"private key", unmarshalledNodes[len(unmarshalledNodes)-1].PrivateKey)
 	}
-	for _, producerEntity := range producerEntities {
-		producers = append(producers, producerEntity.CreateProducer())
-		require.NotNil(t, producers[len(producers)-1])
-		log.Info("producer created", "id", producers[len(producers)-1].Id)
+	for _, unmarshalledNode := range unmarshalledNodes {
+		nodes = append(nodes, unmarshalledNode.CreateNode())
+		require.NotNil(t, nodes[len(nodes)-1])
+		log.Info("node created", "id", nodes[len(nodes)-1].Id)
 	}
 
 	// 3. fully communicate to certify all dkgs
 	fullCommunicate()
-	for _, producer := range producers {
-		assert.True(t, producer.ReadyToQuery())
+	for _, node := range nodes {
+		assert.True(t, node.ReadyToQuery())
 	}
 
 	// 4. query and aggregate result
 	initRedis()
-	verifier := getProducer(aggregator.SelectVerifierId())
-	log.Info("verifier selected randomly", "verifier id", verifier.Id)
+	verifier := nodes[rand.Int()%len(nodes)]
+	log.Info("verifier selected", "verifier id", verifier.Id)
 	expression := "k1"
 	expectedValue := "v1"
 	signatures := make([][]byte, 0)
-	for _, producer := range producers {
-		message, signature := producer.Query(expression)
+	for _, node := range nodes {
+		message, signature := node.Query(expression)
 		assert.Equal(t, expectedValue, message)
 		ok := verifier.Verify(message, signature)
 		assert.True(t, ok)
