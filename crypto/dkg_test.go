@@ -138,5 +138,5 @@ func TestPedersenDkg(t *testing.T) {
 		}
 	}
 
-	// todo: verify(expectedDistributedPublicKey, VerifiableMessage, expectedSignature)
+	// then, call contract function: verify(expectedDistributedPublicKey, VerifiableMessage, expectedSignature)
 }

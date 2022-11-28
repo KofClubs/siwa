@@ -24,112 +24,86 @@ package node
 
 import (
 	"fmt"
-	"strconv"
-
-	"go.dedis.ch/kyber/v3"
 )
 
+// todo: implement these variables at off-chain registry
 var (
-	aggregatorCounter *int
-	producerCounter   map[string]int
-	aggregatorTable   map[string]*Aggregator
-	producerTable     map[string]*Producer
-	dkgIndexTable     map[int]*Producer
-	publicKeyTable    map[kyber.Point]*Producer
+	groupCounter       *int
+	nodeCounterByGroup map[string]int
+	groupTable         map[string]*Group
+	nodeTable          map[string]*Node
+	dkgIndexTable      map[int]*Node
 )
 
 func init() {
-	if aggregatorCounter == nil {
-		var aggregatorCounterValue int
-		aggregatorCounter = &aggregatorCounterValue
+	if groupCounter == nil {
+		var groupCounterValue int
+		groupCounter = &groupCounterValue
 	}
-	if producerCounter == nil {
-		producerCounter = make(map[string]int)
+	if nodeCounterByGroup == nil {
+		nodeCounterByGroup = make(map[string]int)
 	}
-	if aggregatorTable == nil {
-		aggregatorTable = make(map[string]*Aggregator)
+	if groupTable == nil {
+		groupTable = make(map[string]*Group)
 	}
-	if producerTable == nil {
-		producerTable = make(map[string]*Producer)
+	if nodeTable == nil {
+		nodeTable = make(map[string]*Node)
 	}
 	if dkgIndexTable == nil {
-		dkgIndexTable = make(map[int]*Producer)
-	}
-	if publicKeyTable == nil {
-		publicKeyTable = make(map[kyber.Point]*Producer)
+		dkgIndexTable = make(map[int]*Node)
 	}
 }
 
-func getAggregatorId() string {
-	if aggregatorCounter == nil {
-		return ""
+func generateNodeId(groupId string) string {
+	if _, ok := nodeCounterByGroup[groupId]; !ok {
+		nodeCounterByGroup[groupId] = 0
 	}
-	aggregatorId := strconv.Itoa(*aggregatorCounter)
-	*aggregatorCounter++
-	return aggregatorId
+	count := nodeCounterByGroup[groupId]
+	nodeCounterByGroup[groupId]++
+	return fmt.Sprintf("%v.%v", count, groupId)
 }
 
-func getProducerId(aggregatorId string) (string, int) {
-	if _, ok := producerCounter[aggregatorId]; !ok {
-		producerCounter[aggregatorId] = 0
-	}
-	producerId := producerCounter[aggregatorId]
-	producerCounter[aggregatorId]++
-	return fmt.Sprintf("%v.%v", producerId, aggregatorId), producerId
-}
-
-func getAggregator(aggregatorId string) *Aggregator {
-	if aggregatorTable == nil {
+func getGroup(groupId string) *Group {
+	if groupTable == nil {
 		return nil
 	}
-	if aggregator, ok := aggregatorTable[aggregatorId]; ok {
-		return aggregator
+	if group, ok := groupTable[groupId]; ok {
+		return group
 	}
 	return nil
 }
 
-func setAggregator(aggregator *Aggregator) {
-	if aggregator == nil {
-		return
-	}
-	aggregatorTable[aggregator.Id] = aggregator
-}
-
-func getProducer(producerId string) *Producer {
-	if producerTable == nil {
+func getNode(nodeId string) *Node {
+	if nodeTable == nil {
 		return nil
 	}
-	if producer, ok := producerTable[producerId]; ok {
-		return producer
+	if node, ok := nodeTable[nodeId]; ok {
+		return node
 	}
 	return nil
 }
 
-func getProducerByDkgIndex(index int) *Producer {
+func getNodeByDkgIndex(index int) *Node {
 	if dkgIndexTable == nil {
 		return nil
 	}
-	if producer, ok := dkgIndexTable[index]; ok {
-		return producer
+	if node, ok := dkgIndexTable[index]; ok {
+		return node
 	}
 	return nil
 }
 
-func getProducerByPublicKey(publicKey kyber.Point) *Producer {
-	if publicKeyTable == nil {
-		return nil
-	}
-	if producer, ok := publicKeyTable[publicKey]; ok {
-		return producer
-	}
-	return nil
-}
-
-func setProducer(producer *Producer) {
-	if producerTable == nil {
+func setGroup(group *Group) {
+	if groupTable == nil || group == nil {
 		return
 	}
-	producerTable[producer.Id] = producer
-	dkgIndexTable[producer.Dkg.GetIndex()] = producer
-	publicKeyTable[producer.PublicKey] = producer
+	groupTable[group.Id] = group
+}
+
+func setNode(node *Node) {
+	if nodeTable == nil || node == nil {
+		return
+	}
+	nodeTable[node.Id] = node
+	dkgIndexTable[node.Dkg.GetIndex()] = node
 }
