@@ -26,6 +26,7 @@ import (
 	"fmt"
 )
 
+// todo: implement these variables at off-chain registry
 var (
 	groupCounter       *int
 	nodeCounterByGroup map[string]int

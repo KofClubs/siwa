@@ -28,7 +28,7 @@ import (
 )
 
 // Group is not an entity, but information shared by a group of nodes
-// todo: implement Group in the contract
+// todo: implement Group at on-chain registry
 type Group struct {
 	Id        string
 	NodeIds   map[string]struct{}

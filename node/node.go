@@ -29,7 +29,6 @@ import (
 	"github.com/KofClubs/siwa/node/querier"
 	"github.com/MonteCarloClub/log"
 	"github.com/MonteCarloClub/utils"
-	"github.com/MonteCarloClub/zmq"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 )
@@ -42,14 +41,13 @@ type UnmarshalledNode struct {
 }
 
 type Node struct {
-	Id, GroupId  string
-	Rank         int
-	Suite        *bn256.Suite
-	privateKey   kyber.Scalar
-	PublicKey    kyber.Point
-	Dkg          *crypto.DistributedKeyGenerator
-	ZmqSocketSet *zmq.SocketSet
-	Querier      querier.Querier
+	Id, GroupId string
+	Rank        int
+	Suite       *bn256.Suite
+	privateKey  kyber.Scalar
+	PublicKey   kyber.Point
+	Dkg         *crypto.DistributedKeyGenerator
+	Querier     querier.Querier
 }
 
 func (unmarshalledNode *UnmarshalledNode) CreateNode() *Node {
@@ -62,7 +60,7 @@ func (unmarshalledNode *UnmarshalledNode) CreateNode() *Node {
 	if groupId == "" {
 		log.Info("group not specified, select one for this node",
 			"private key", unmarshalledNode.PrivateKey)
-		// todo: call the load balancing algorithm to assign it to an group
+		// todo: call the scheduling algorithm to assign it to an group
 		log.Info("group selected for this node", "private key", unmarshalledNode.PrivateKey,
 			"group id", groupId)
 	}
